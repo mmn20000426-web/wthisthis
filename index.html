@@ -206,9 +206,9 @@
                 soundFile = 'attack.mp3';
                 volume = 0.25;
             } else if (soundType === 'melee') {
-                soundFile = 'attack.mp3';
+                soundFile = 'attack (1).mp3'; // images (9) 的網球近戰塔音效
             } else if (soundType === 'gun') {
-                soundFile = 'attack.mp3';
+                soundFile = 'attack (2).mp4'; // images (11) 的手槍格洛克塔音效
             }
 
             const attackSound = new Audio(soundFile);
@@ -217,7 +217,7 @@
         }
 
         function playSkillSound() {
-            const skillSound = new Audio('skill.mp3');
+            const skillSound = new Audio('skill.mp4');
             skillSound.volume = 0.7;
             skillSound.play().catch(() => {});
         }
@@ -273,12 +273,11 @@
         let cloneRunners = [];
 
         function setBuildType(type) {
-            // 如果點擊當前選擇的類型，則切換回空手狀態
             if (currentBuildType === type) {
                 currentBuildType = null;
             } else {
                 currentBuildType = type;
-                selectedTower = null; // 清除選取的塔
+                selectedTower = null;
             }
 
             document.getElementById('type-远程').classList.toggle('active', currentBuildType === '远程');
@@ -327,7 +326,7 @@
                 this.level = 1;
                 this.stunTimer = 0;
                 this.weakenTimer = 0;
-                this.totalSpent = getTowerCost(towerType); // 記錄總投入成本
+                this.totalSpent = getTowerCost(towerType);
 
                 if (towerType === '近战') {
                     this.range = 75;
@@ -1079,16 +1078,11 @@
                 let enemyType = 'normal';
                 if (wave >= 2) {
                     let rand = Math.random();
-                    /* 
-                       Heavy Enemy (images (8).jpg) 生成率減少 7%：
-                       原邏輯機率區間：0.45 ~ 0.70 (25%)
-                       修改後機率區間：0.45 ~ 0.63 (18%，減少了 7%)
-                    */
                     if (wave >= 7 && rand < 0.25) {
                         enemyType = 'car';
                     } else if (wave >= 5 && rand < 0.45) {
                         enemyType = 'stun';
-                    } else if (rand < 0.63) { // 由 0.70 降低為 0.63 (-7%)
+                    } else if (rand < 0.63) {
                         enemyType = 'heavy';
                     } else if (rand < 0.90) {
                         enemyType = 'fast';
@@ -1241,7 +1235,6 @@
             let sellPrice = Math.floor(selectedTower.totalSpent * 0.7);
             gold += sellPrice;
             
-            // 從陣列中移除該塔
             towers = towers.filter(t => t !== selectedTower);
             selectedTower = null;
             updateUI();
@@ -1265,16 +1258,15 @@
 
             if (clickedTower) {
                 selectedTower = clickedTower;
-                clearBuildType(); // 選取防禦塔時切換回空手狀態
+                clearBuildType();
             } else if (currentBuildType) {
-                // 如果目前在建塔狀態下點擊草地
                 let cost = getTowerCost(currentBuildType);
                 if (gold >= cost && canBuild(x, y)) {
                     gold -= cost;
                     let newTower = new Tower(x, y, currentBuildType);
                     towers.push(newTower);
                     selectedTower = newTower;
-                    clearBuildType(); // 建完單位後自動回到空手狀態
+                    clearBuildType();
                 } else {
                     selectedTower = null;
                 }
