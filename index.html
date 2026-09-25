@@ -45,21 +45,21 @@
             width: 280px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
         .stat-box {
             background: #2b2b36;
-            padding: 10px 14px;
+            padding: 8px 12px;
             border-radius: 8px;
             border-left: 4px solid #f1c40f;
         }
         .stat-box h3 {
-            font-size: 12px;
+            font-size: 11px;
             color: #aaa;
             margin-bottom: 2px;
         }
         .stat-box p {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
         }
         .btn {
@@ -93,11 +93,11 @@
         .select-tower-group {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 5px;
         }
         .select-btn {
             width: 100%;
-            padding: 8px;
+            padding: 7px;
             font-size: 12px;
             background: #444;
             color: white;
@@ -112,11 +112,11 @@
         }
         .tower-info {
             background: #2b2b36;
-            padding: 12px;
+            padding: 10px;
             border-radius: 8px;
-            font-size: 13px;
-            line-height: 1.6;
-            min-height: 95px;
+            font-size: 12px;
+            line-height: 1.5;
+            min-height: 90px;
             border: 1px solid #3a3a4c;
         }
         .action-buttons {
@@ -150,9 +150,10 @@
             <label style="font-size:12px; color:#aaa;">選擇建造類型：</label>
             <div class="select-tower-group">
                 <button class="select-btn" id="type-远程" onclick="setBuildType('远程')">🎯 遠程緩速塔 (💰100)</button>
-                <button class="select-btn" id="type-近战" onclick="setBuildType('近战')">🎾 網球近戰塔 (💰120)</button>
+                <button class="select-btn" id="type-近战" onclick="setBuildType('近战')">🎾 網球噴墨塔 (💰120)</button>
                 <button class="select-btn" id="type-手枪" onclick="setBuildType('手枪')">🔫 手槍格洛克塔 (💰150)</button>
                 <button class="select-btn" id="type-複製" onclick="setBuildType('複製')">👥 複製體衝擊塔 (💰180)</button>
+                <button class="select-btn" id="type-RPG" onclick="setBuildType('RPG')">🚀 玻璃缸RPG塔 (💰200)</button>
             </div>
 
             <div class="tower-info" id="tower-info">
@@ -183,12 +184,14 @@
         const cloneTowerImg = new Image();
         const carImg = new Image();
         const imagesGunnerImg = new Image();
+        const rpgTowerImg = new Image();
+        const summonerEnemyImg = new Image();
 
         bgImg.src = 'base.jpg';                 // 背景圖
         enemyImg.src = 'images (7).jpg';       // 普通敵人
         towerImg.src = 'images (6).jpg';       // 遠程緩速塔
         heavyEnemyImg.src = 'images (8).jpg';  // 重型敵人
-        meleeTowerImg.src = 'images (9).jpg';  // 網球近戰塔
+        meleeTowerImg.src = 'images (9).jpg';  // 網球近戰塔 (暈眩噴墨)
         fastEnemyImg.src = 'images (10).jpg';  // 快速敵人
         glockTowerImg.src = 'images (11).jpg'; // 手槍格洛克塔
         bossImg.src = 'images (12).jpg';       // BOSS 敵人
@@ -196,27 +199,34 @@
         cloneTowerImg.src = 'images (14).jpg';  // 複製體衝擊塔
         carImg.src = 'car.jpg';                // 汽車型態圖片
         imagesGunnerImg.src = 'images.jpg';    // images 手槍槍手型態圖片
+        rpgTowerImg.src = 'images (1).jpg';    // 玻璃缸 RPG 塔
+        summonerEnemyImg.src = 'images (2).jpg';// 召喚師敵人
 
         let bossAudio = null;
 
         function playAttackSound(soundType = 'normal') {
             let soundFile = 'attack.mp3';
-            let volume = 0.4;
+            let volume = 0.276; // 0.24 增加 15% 增加至 0.276
 
             if (soundType === 'slow_tower') {
                 soundFile = 'attack.mp3';
-                volume = 0.6;
+                volume = 0.276; // images (6) 攻擊音效增加 15%
             } else if (soundType === 'melee') {
                 soundFile = 'attack (1).mp3';
+                volume = 0.48;
             } else if (soundType === 'gun') {
                 soundFile = 'attack (2).mp4';
+                volume = 0.48;
             } else if (soundType === 'clone_spawn') {
                 soundFile = 'attack (3).mp4';
-                volume = 0.5;
+                volume = 0.55;
+            } else if (soundType === 'rpg') {
+                soundFile = 'attack (4).mp4';
+                volume = 0.56;
             }
 
             const attackSound = new Audio(soundFile);
-            attackSound.volume = volume;
+            attackSound.volume = Math.min(1.0, Math.max(0.0, volume));
             attackSound.play().catch(() => {});
         }
 
@@ -224,6 +234,12 @@
             const skillSound = new Audio('skill.mp4');
             skillSound.volume = 0.7;
             skillSound.play().catch(() => {});
+        }
+
+        function playSummonSkillSound() {
+            const summonSound = new Audio('skill (1).mp4');
+            summonSound.volume = 0.7;
+            summonSound.play().catch(() => {});
         }
 
         function playBossMusic() {
@@ -273,6 +289,7 @@
         let bossSkillProjectiles = [];
         let visualEffects = [];
         let cloneRunners = [];
+        let syringes = [];
 
         function setBuildType(type) {
             if (currentBuildType === type) {
@@ -286,6 +303,7 @@
             document.getElementById('type-近战').classList.toggle('active', currentBuildType === '近战');
             document.getElementById('type-手枪').classList.toggle('active', currentBuildType === '手枪');
             document.getElementById('type-複製').classList.toggle('active', currentBuildType === '複製');
+            document.getElementById('type-RPG').classList.toggle('active', currentBuildType === 'RPG');
             updateUI();
         }
 
@@ -295,6 +313,7 @@
             document.getElementById('type-近战').classList.remove('active');
             document.getElementById('type-手枪').classList.remove('active');
             document.getElementById('type-複製').classList.remove('active');
+            document.getElementById('type-RPG').classList.remove('active');
         }
 
         function getFirstTarget(towerX, towerY, range) {
@@ -315,7 +334,11 @@
         }
 
         function getTowerCost(type) {
-            return type === '複製' ? 180 : (type === '手枪' ? 150 : (type === '近战' ? 120 : 100));
+            if (type === 'RPG') return 200;
+            if (type === '複製') return 180;
+            if (type === '手枪') return 150;
+            if (type === '近战') return 120;
+            return 100;
         }
 
         class Tower {
@@ -328,17 +351,18 @@
                 this.stunTimer = 0;
                 this.weakenTimer = 0;
                 this.totalSpent = getTowerCost(towerType);
-                this.spawnDelayTimer = 0; // 複製體召喚延遲計時器
+                this.spawnDelayTimer = 0;
+                this.wasStunned = false;
 
                 if (towerType === '近战') {
-                    this.range = 75;
+                    this.range = 85;
                     this.baseDamage = 10;
-                    this.fireRate = 35;
+                    this.fireRate = 30;
                     this.bonusGold = 15;
                     this.img = meleeTowerImg;
                 } else if (towerType === '手枪') {
                     this.range = 200;
-                    this.baseDamage = 85;
+                    this.baseDamage = 130;
                     this.fireRate = 300;
                     this.bonusGold = 0;
                     this.img = glockTowerImg;
@@ -349,6 +373,13 @@
                     this.fireRate = 360;
                     this.bonusGold = 0;
                     this.img = cloneTowerImg;
+                } else if (towerType === 'RPG') {
+                    this.range = 220;
+                    this.baseDamage = 60;
+                    this.fireRate = 270;
+                    this.bonusGold = 0;
+                    this.img = rpgTowerImg;
+                    this.projectileType = 'rpg';
                 } else {
                     this.range = 130;
                     this.baseDamage = 12;
@@ -382,7 +413,7 @@
 
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius + 3, 0, Math.PI * 2);
-                ctx.fillStyle = selectedTower === this ? '#f1c40f' : (this.towerType === '近战' ? '#e67e22' : (this.towerType === '手枪' ? '#95a5a6' : (this.towerType === '複製' ? '#8e44ad' : '#333')));
+                ctx.fillStyle = selectedTower === this ? '#f1c40f' : (this.towerType === '近战' ? '#e67e22' : (this.towerType === '手枪' ? '#95a5a6' : (this.towerType === '複製' ? '#8e44ad' : (this.towerType === 'RPG' ? '#27ae60' : '#333'))));
                 ctx.fill();
 
                 ctx.save();
@@ -408,7 +439,7 @@
                     ctx.fillStyle = '#e74c3c';
                     ctx.font = 'bold 12px sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText('🪢 被抓取暈眩中', this.x, this.y - this.radius - 8);
+                    ctx.fillText('💫 暈眩噴墨中', this.x, this.y - this.radius - 8);
                 }
 
                 if (this.swingAnimation > 0 && this.stunTimer <= 0) {
@@ -429,11 +460,26 @@
                 if (this.weakenTimer > 0) this.weakenTimer--;
 
                 if (this.stunTimer > 0) {
+                    if (this.towerType === '近战') {
+                        if (!this.wasStunned) {
+                            this.wasStunned = true;
+                            visualEffects.push(new WaveEffect(this.x, this.y, 140, '#000000'));
+                        }
+                        for (let enemy of enemies) {
+                            if (enemy.hp <= 0) continue;
+                            let dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+                            if (dist <= 140) {
+                                enemy.inkSlowed = true;
+                            }
+                        }
+                    }
+
                     this.stunTimer--;
                     return;
+                } else {
+                    this.wasStunned = false;
                 }
 
-                // 處理複製體 1.2 秒預告倒數 (72 frames)
                 if (this.spawnDelayTimer > 0) {
                     this.spawnDelayTimer--;
                     if (this.spawnDelayTimer === 0) {
@@ -451,7 +497,7 @@
                             if (target) {
                                 target.takeDamage(this.damage);
                                 this.swingAnimation = 10;
-                                this.cooldown = Math.max(8, this.fireRate);
+                                this.cooldown = Math.max(5, this.fireRate);
                                 playAttackSound('melee');
                             }
                         } else if (this.towerType === '手枪') {
@@ -461,9 +507,15 @@
                                 playAttackSound('gun');
                             }
                         } else if (this.towerType === '複製') {
-                            playAttackSound('clone_spawn'); // 1.2秒前先播放音效
-                            this.spawnDelayTimer = 72;     // 72 frames ≈ 1.2 秒後召喚
+                            playAttackSound('clone_spawn');
+                            this.spawnDelayTimer = 72;
                             this.cooldown = Math.max(120, this.fireRate);
+                        } else if (this.towerType === 'RPG') {
+                            if (target) {
+                                projectiles.push(new Projectile(this.x, this.y, target, this.damage, 'rpg', false));
+                                this.cooldown = Math.max(60, this.fireRate);
+                                playAttackSound('rpg');
+                            }
                         } else {
                             if (target) {
                                 this.projectileType = this.projectileType === 'egg' ? 'oyster' : 'egg';
@@ -481,20 +533,73 @@
                 this.totalSpent += cost;
                 this.level++;
                 if (this.towerType === '手枪') {
-                    this.baseDamage += 25;
+                    this.baseDamage += 40;
                     this.fireRate = Math.max(120, Math.floor(this.fireRate * 0.95));
                 } else if (this.towerType === '近战') {
-                    this.baseDamage += 1;
+                    this.baseDamage += 2;
                     this.bonusGold += 5;
-                    this.fireRate = Math.max(8, Math.floor(this.fireRate * 0.95));
+                    this.fireRate = Math.max(10, Math.floor(this.fireRate * 0.95));
                 } else if (this.towerType === '複製') {
                     this.baseDamage += 15;
                     this.fireRate = Math.max(150, Math.floor(this.fireRate * 0.95));
+                } else if (this.towerType === 'RPG') {
+                    this.baseDamage += 20;
+                    this.fireRate = Math.max(90, Math.floor(this.fireRate * 0.95));
                 } else {
                     this.baseDamage += 2;
                     this.fireRate = Math.max(8, Math.floor(this.fireRate * 0.95));
                 }
                 this.range += 6;
+            }
+        }
+
+        class Syringe {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 12;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, 16, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(46, 204, 113, 0.3)';
+                ctx.fill();
+
+                ctx.fillStyle = '#ecf0f1';
+                ctx.fillRect(-3, -8, 6, 14);
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(-2, -2, 4, 7);
+                ctx.strokeStyle = '#2c3e50';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(-3, -8, 6, 14);
+
+                ctx.beginPath();
+                ctx.moveTo(0, 6);
+                ctx.lineTo(0, 12);
+                ctx.strokeStyle = '#7f8c8d';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            update() {
+                for (let enemy of enemies) {
+                    if (enemy.dead || enemy.type === 'boss') continue;
+                    let dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+                    if (dist <= 60) {
+                        let hpBonus = Math.floor(enemy.maxHp * 0.20);
+                        enemy.maxHp += hpBonus;
+                        enemy.hp += hpBonus;
+                        visualEffects.push(new WaveEffect(this.x, this.y, 80));
+                        return true;
+                    }
+                }
+                return false;
             }
         }
 
@@ -579,10 +684,10 @@
         }
 
         class Enemy {
-            constructor(type = 'normal') {
-                this.x = path[0].x;
-                this.y = path[0].y;
-                this.pathIndex = 0;
+            constructor(type = 'normal', spawnX = null, spawnY = null, spawnPathIndex = 0, hpMult = 1.0, speedMult = 1.0) {
+                this.pathIndex = spawnPathIndex;
+                this.x = spawnX !== null ? spawnX : path[0].x;
+                this.y = spawnY !== null ? spawnY : path[0].y;
                 this.distanceTraveled = 0;
                 this.type = type;
                 this.dead = false;
@@ -598,20 +703,29 @@
 
                 if (type === 'boss') {
                     this.radius = 30;
-                    this.baseSpeed = baseSpeed * 0.35;
-                    this.maxHp = baseHp * 15;
+                    this.baseSpeed = baseSpeed * 0.35 * speedMult;
+                    this.maxHp = baseHp * 16.5 * hpMult;
                     this.reward = 100 + wave * 20;
                     this.img = bossImg;
                     this.color = '#c0392b';
                     this.skillTimer = 0;
                     this.shoutTimer = 0;
+                    this.syringeTimer = 0;
                     playBossMusic();
+                } else if (type === 'summoner') {
+                    this.radius = 25;
+                    this.baseSpeed = baseSpeed * 0.75 * speedMult;
+                    this.maxHp = baseHp * 2.8 * hpMult;
+                    this.reward = 50 + wave * 8;
+                    this.img = summonerEnemyImg;
+                    this.color = '#9b59b6';
+                    this.summonTimer = 0;
                 } else if (type === 'car') {
                     this.radius = 26;
-                    this.baseSpeed = baseSpeed * 1.2;
+                    this.baseSpeed = baseSpeed * 1.2 * speedMult;
                     this.phase = 1;
-                    this.carHp = baseHp * 2.5;
-                    this.humanHp = Math.max(10, baseHp * 0.6);
+                    this.carHp = baseHp * 2.5 * hpMult;
+                    this.humanHp = Math.max(10, baseHp * 0.6 * hpMult);
                     this.maxHp = this.carHp;
                     this.hp = this.carHp;
                     this.reward = 35 + wave * 5;
@@ -620,22 +734,22 @@
                     this.shootTimer = 0;
                 } else if (type === 'heavy') {
                     this.radius = 24;
-                    this.baseSpeed = baseSpeed * 0.5;
-                    this.maxHp = baseHp * 2.2;
+                    this.baseSpeed = baseSpeed * 0.5 * speedMult;
+                    this.maxHp = baseHp * 2.2 * hpMult;
                     this.reward = Math.floor((12 + wave * 3) * 2);
                     this.img = heavyEnemyImg;
                     this.color = '#8e44ad';
                 } else if (type === 'fast') {
                     this.radius = 16;
-                    this.baseSpeed = baseSpeed * 2.5;
-                    this.maxHp = baseHp * 0.4;
+                    this.baseSpeed = baseSpeed * 2.5 * speedMult;
+                    this.maxHp = baseHp * 0.4 * hpMult;
                     this.reward = Math.floor((12 + wave * 3) * 0.8);
                     this.img = fastEnemyImg;
                     this.color = '#f39c12';
                 } else if (type === 'stun') {
                     this.radius = 22;
-                    this.baseSpeed = baseSpeed * 0.85;
-                    this.maxHp = baseHp * 1.6;
+                    this.baseSpeed = baseSpeed * 0.85 * speedMult;
+                    this.maxHp = baseHp * 1.6 * hpMult;
                     this.reward = Math.floor((12 + wave * 3) * 1.5);
                     this.img = stunEnemyImg;
                     this.color = '#16a085';
@@ -644,8 +758,8 @@
                     this.grabCooldown = 0;
                 } else {
                     this.radius = 20;
-                    this.baseSpeed = baseSpeed;
-                    this.maxHp = baseHp;
+                    this.baseSpeed = baseSpeed * speedMult;
+                    this.maxHp = baseHp * hpMult;
                     this.reward = 12 + wave * 3;
                     this.img = enemyImg;
                     this.color = '#e74c3c';
@@ -657,6 +771,7 @@
 
                 this.slowTimer = 0;
                 this.boostTimer = 0;
+                this.inkSlowed = false;
             }
 
             takeDamage(amount) {
@@ -697,9 +812,17 @@
 
                 ctx.save();
 
+                if (this.inkSlowed) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius + 8, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+
                 if (this.slowTimer > 0) {
                     ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius + 6, 0, Math.PI * 2);
+                    ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI * 2);
                     ctx.strokeStyle = '#3498db';
                     ctx.lineWidth = 3;
                     ctx.stroke();
@@ -707,7 +830,7 @@
 
                 if (this.boostTimer > 0) {
                     ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius + 4, 0, Math.PI * 2);
+                    ctx.arc(this.x, this.y, this.radius + 3, 0, Math.PI * 2);
                     ctx.strokeStyle = '#e74c3c';
                     ctx.lineWidth = 3;
                     ctx.stroke();
@@ -738,32 +861,22 @@
 
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = this.type === 'boss' ? '#f1c40f' : (this.type === 'car' ? (this.phase === 1 ? '#000' : '#e67e22') : this.color);
-                ctx.lineWidth = this.type === 'boss' ? 4 : (this.type === 'heavy' || this.type === 'car' ? 3 : 2);
+                ctx.strokeStyle = this.type === 'boss' ? '#f1c40f' : (this.type === 'car' ? (this.phase === 1 ? '#000' : '#e67e22') : (this.type === 'summoner' ? '#8e44ad' : this.color));
+                ctx.lineWidth = this.type === 'boss' ? 4 : (this.type === 'heavy' || this.type === 'car' || this.type === 'summoner' ? 3 : 2);
                 ctx.stroke();
 
-                if (this.type === 'car') {
-                    ctx.fillStyle = this.phase === 1 ? '#f1c40f' : '#e67e22';
-                    ctx.font = 'bold 10px sans-serif';
+                if (this.inkSlowed) {
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 9px sans-serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText(this.phase === 1 ? '汽車型態 (car.jpg)' : 'images 槍手掃射', this.x, this.y - this.radius - 14);
-                } else if (this.boostTimer > 0) {
-                    ctx.fillStyle = '#e74c3c';
-                    ctx.font = 'bold 10px sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('SPEED UP', this.x, this.y - this.radius - 14);
-                } else if (this.slowTimer > 0) {
-                    ctx.fillStyle = '#3498db';
-                    ctx.font = 'bold 10px sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('SLOW', this.x, this.y - this.radius - 14);
+                    ctx.fillText('墨汁-10%', this.x, this.y - this.radius - 14);
                 }
 
                 let barWidth = this.radius * 2;
                 ctx.fillStyle = 'rgba(0,0,0,0.6)';
-                ctx.fillRect(this.x - barWidth / 2, this.y - this.radius - 8, barWidth, 5);
+                ctx.fillRect(this.x - barWidth / 2, this.y - this.radius - 6, barWidth, 4);
                 ctx.fillStyle = this.type === 'boss' ? '#e74c3c' : (this.type === 'car' && this.phase === 1 ? '#f39c12' : '#2ecc71');
-                ctx.fillRect(this.x - barWidth / 2, this.y - this.radius - 8, (Math.max(0, this.hp) / this.maxHp) * barWidth, 5);
+                ctx.fillRect(this.x - barWidth / 2, this.y - this.radius - 6, (Math.max(0, this.hp) / this.maxHp) * barWidth, 4);
             }
 
             update() {
@@ -771,12 +884,33 @@
 
                 let currentSpeed = this.baseSpeed;
                 
+                if (this.inkSlowed) {
+                    currentSpeed *= 0.90;
+                }
+
                 if (this.boostTimer > 0) {
                     currentSpeed *= 1.3;
                     this.boostTimer--;
                 } else if (this.slowTimer > 0) {
-                    currentSpeed *= 0.6;
+                    currentSpeed *= 0.60;
                     this.slowTimer--;
+                }
+
+                if (this.type === 'summoner') {
+                    this.summonTimer++;
+                    if (this.summonTimer >= 480) { // 8 秒冷卻 (60 FPS * 8)
+                        this.summonTimer = 0;
+                        playSummonSkillSound();
+                        visualEffects.push(new WaveEffect(this.x, this.y, 120, 'rgba(155, 89, 182,'));
+
+                        const nonBossTypes = ['normal', 'heavy', 'fast', 'stun', 'car'];
+                        for (let i = 0; i < 2; i++) {
+                            let randomType = nonBossTypes[Math.floor(Math.random() * nonBossTypes.length)];
+                            let spawned = new Enemy(randomType, this.x + (Math.random() * 20 - 10), this.y + (Math.random() * 20 - 10), this.pathIndex, 1.2, 1.2);
+                            spawned.distanceTraveled = this.distanceTraveled;
+                            enemies.push(spawned);
+                        }
+                    }
                 }
 
                 if (this.type === 'car' && this.phase === 2) {
@@ -798,7 +932,7 @@
 
                 if (this.type === 'boss') {
                     this.skillTimer++;
-                    if (this.skillTimer >= 600) {
+                    if (this.skillTimer >= 480) {
                         this.skillTimer = 0;
                         if (towers.length > 0) {
                             let targetTower = towers[Math.floor(Math.random() * towers.length)];
@@ -820,6 +954,13 @@
                                 }
                             }
                         }
+                    }
+
+                    this.syringeTimer++;
+                    if (this.syringeTimer >= 360) {
+                        this.syringeTimer = 0;
+                        let randomNode = path[Math.floor(Math.random() * path.length)];
+                        syringes.push(new Syringe(randomNode.x + (Math.random() * 20 - 10), randomNode.y + (Math.random() * 20 - 10)));
                     }
                 }
 
@@ -865,7 +1006,7 @@
                     this.y = target.y;
                     this.pathIndex++;
                     if (this.pathIndex >= path.length - 1) {
-                        hp -= this.type === 'boss' ? 5 : (this.type === 'heavy' || this.type === 'car' ? 2 : 1);
+                        hp -= this.type === 'boss' ? 5 : (this.type === 'heavy' || this.type === 'car' || this.type === 'summoner' ? 2 : 1);
                         this.hp = 0;
                         this.dead = true;
                         if (this.type === 'boss') stopBossMusic();
@@ -879,19 +1020,24 @@
         }
 
         class WaveEffect {
-            constructor(x, y, maxRadius) {
+            constructor(x, y, maxRadius, color = 'rgba(231, 76, 60,') {
                 this.x = x;
                 this.y = y;
                 this.radius = 10;
                 this.maxRadius = maxRadius;
                 this.alpha = 1.0;
+                this.color = color;
             }
 
             draw() {
                 ctx.save();
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(231, 76, 60, ${this.alpha})`;
+                if (this.color.startsWith('#')) {
+                    ctx.strokeStyle = this.color;
+                } else {
+                    ctx.strokeStyle = `${this.color}${this.alpha})`;
+                }
                 ctx.lineWidth = 4;
                 ctx.stroke();
                 ctx.restore();
@@ -926,11 +1072,14 @@
             }
 
             update() {
+                if (!this.targetTower || towers.indexOf(this.targetTower) === -1) return true;
+
                 let dx = this.targetTower.x - this.x;
                 let dy = this.targetTower.y - this.y;
                 let dist = Math.hypot(dx, dy);
 
                 if (dist < this.speed) {
+                    this.targetTower.stunTimer = 180;
                     return true;
                 }
 
@@ -948,7 +1097,7 @@
                 this.damage = damage;
                 this.type = type;
                 this.isSlow = isSlow;
-                this.speed = type === 'bullet' ? 16 : 9;
+                this.speed = type === 'bullet' ? 16 : (type === 'rpg' ? 8 : 9);
             }
 
             draw() {
@@ -962,6 +1111,18 @@
                     ctx.strokeStyle = '#e67e22';
                     ctx.lineWidth = 1;
                     ctx.stroke();
+                } else if (this.type === 'rpg') {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 9, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(52, 152, 219, 0.7)';
+                    ctx.fill();
+                    ctx.strokeStyle = '#2980b9';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    if (rpgTowerImg.complete && rpgTowerImg.naturalWidth !== 0) {
+                        ctx.drawImage(rpgTowerImg, -6, -6, 12, 12);
+                    }
                 } else if (this.type === 'egg') {
                     ctx.beginPath();
                     ctx.ellipse(0, 0, 7, 10, Math.PI / 4, 0, Math.PI * 2);
@@ -991,10 +1152,20 @@
                 let dist = Math.hypot(dx, dy);
 
                 if (dist < this.speed) {
-                    this.target.takeDamage(this.damage);
-
-                    if (this.isSlow && this.target.applySlow) {
-                        this.target.applySlow(90);
+                    if (this.type === 'rpg') {
+                        visualEffects.push(new WaveEffect(this.x, this.y, 70, '#e67e22'));
+                        for (let enemy of enemies) {
+                            if (enemy.hp <= 0) continue;
+                            let splashDist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+                            if (splashDist <= 70) {
+                                enemy.takeDamage(this.damage);
+                            }
+                        }
+                    } else {
+                        this.target.takeDamage(this.damage);
+                        if (this.isSlow && this.target.applySlow) {
+                            this.target.applySlow(90);
+                        }
                     }
                     return true;
                 }
@@ -1081,13 +1252,15 @@
                 if (wave >= 2) {
                     let rand = Math.random();
 
-                    if (wave >= 7 && rand < 0.05) {
+                    if (wave >= 8 && rand < 0.15) {
+                        enemyType = 'summoner';
+                    } else if (wave >= 7 && rand < 0.20) {
                         enemyType = 'car';
-                    } else if (wave >= 5 && rand < 0.10) {
+                    } else if (wave >= 5 && rand < 0.30) {
                         enemyType = 'stun';
-                    } else if (rand < 0.25) {
+                    } else if (rand < 0.50) {
                         enemyType = 'heavy';
-                    } else if (rand < 0.65) {
+                    } else if (rand < 0.80) {
                         enemyType = 'fast';
                     } else {
                         enemyType = 'normal';
@@ -1101,6 +1274,7 @@
 
             if (enemies.length === 0 && enemiesSpawned >= maxEnemiesPerWave) {
                 wave++;
+                hp += 1;
                 enemiesSpawned = 0;
                 bossSpawnedThisWave = false;
 
@@ -1112,6 +1286,14 @@
                 }
                 if (bonusTotal > 0) {
                     gold += bonusTotal;
+                }
+            }
+
+            for (let i = syringes.length - 1; i >= 0; i--) {
+                let s = syringes[i];
+                s.draw();
+                if (s.update()) {
+                    syringes.splice(i, 1);
                 }
             }
 
@@ -1199,9 +1381,10 @@
                     • 攻擊頻率: ${(60 / selectedTower.fireRate).toFixed(2)}/秒<br>
                     • 範圍: ${selectedTower.range}<br>
                     ${selectedTower.towerType === '远程' ? '• 特效: 擊中附帶 40% 緩速 (1.5秒)' : ''}
-                    ${selectedTower.towerType === '近战' ? `• 每回合收益: 💰${selectedTower.bonusGold}` : ''}
-                    ${selectedTower.towerType === '手枪' ? '• 特色: 超高傷害 (5秒發射一次)' : ''}
+                    ${selectedTower.towerType === '近战' ? `• 每回合收益: 💰${selectedTower.bonusGold}<br>• 特效: 暈眩時噴墨，敵人永久 -10% 速度` : ''}
+                    ${selectedTower.towerType === '手枪' ? '• 特色: 超高單體傷害 (5秒發射一次)' : ''}
                     ${selectedTower.towerType === '複製' ? '• 特色: 從邊界召喚慢速衝擊體撞擊敵人' : ''}
+                    ${selectedTower.towerType === 'RPG' ? '• 特色: 玻璃缸 RPG 範圍爆炸傷害' : ''}
                 `;
 
                 btnUpgrade.disabled = gold < cost;
