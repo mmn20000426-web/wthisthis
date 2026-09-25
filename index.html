@@ -1080,9 +1080,9 @@
                     let rand = Math.random();
                     if (wave >= 7 && rand < 0.25) {
                         enemyType = 'car';
-                    } else if (wave >= 5 && rand < 0.45) {
+                    } else if (wave >= 5 && rand < 0.50) {
                         enemyType = 'stun';
-                    } else if (rand < 0.63) {
+                    } else if (rand < 0.60) { // 將 images (8) 重型敵人的登場率從約 20% 調低至約 10%
                         enemyType = 'heavy';
                     } else if (rand < 0.90) {
                         enemyType = 'fast';
