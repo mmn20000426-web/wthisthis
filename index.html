@@ -66,9 +66,9 @@
             background: #3498db;
             color: white;
             border: none;
-            padding: 12px;
+            padding: 10px;
             border-radius: 8px;
-            font-size: 15px;
+            font-size: 14px;
             cursor: pointer;
             transition: all 0.2s;
             font-weight: bold;
@@ -83,6 +83,12 @@
             color: #888;
             cursor: not-allowed;
             box-shadow: none;
+        }
+        .btn-sell {
+            background: #e74c3c;
+        }
+        .btn-sell:hover:not(:disabled) {
+            background: #c0392b;
         }
         .select-tower-group {
             display: flex;
@@ -113,6 +119,11 @@
             min-height: 95px;
             border: 1px solid #3a3a4c;
         }
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
     </style>
 </head>
 <body>
@@ -138,17 +149,20 @@
 
             <label style="font-size:12px; color:#aaa;">選擇建造類型：</label>
             <div class="select-tower-group">
-                <button class="select-btn active" id="type-远程" onclick="setBuildType('远程')">🎯 遠程緩速塔 (💰100)</button>
+                <button class="select-btn" id="type-远程" onclick="setBuildType('远程')">🎯 遠程緩速塔 (💰100)</button>
                 <button class="select-btn" id="type-近战" onclick="setBuildType('近战')">🎾 網球近戰塔 (💰120)</button>
                 <button class="select-btn" id="type-手枪" onclick="setBuildType('手枪')">🔫 手槍格洛克塔 (💰150)</button>
                 <button class="select-btn" id="type-複製" onclick="setBuildType('複製')">👥 複製體衝擊塔 (💰180)</button>
             </div>
 
             <div class="tower-info" id="tower-info">
-                👉 <strong>點擊地圖建造防禦塔</strong>
+                👉 <strong>點擊上方按鈕選擇建造類型，或點擊地圖上的塔進行選取</strong>
             </div>
 
-            <button class="btn" id="btn-upgrade" onclick="upgradeTowerAll()" disabled>一鍵升級全屬性 [💰 60]</button>
+            <div class="action-buttons">
+                <button class="btn" id="btn-upgrade" onclick="upgradeTowerAll()" disabled>一鍵升級全屬性</button>
+                <button class="btn btn-sell" id="btn-sell" onclick="sellSelectedTower()" disabled>💰 賣出防禦塔</button>
+            </div>
         </div>
     </div>
 
@@ -190,11 +204,11 @@
 
             if (soundType === 'slow_tower') {
                 soundFile = 'attack.mp3';
-                volume = 0.25; // 已調高音量 (原本為 0.08)
+                volume = 0.25;
             } else if (soundType === 'melee') {
-                soundFile = 'attack (1).mp3';
+                soundFile = 'attack.mp3';
             } else if (soundType === 'gun') {
-                soundFile = 'attack (2).mp4';
+                soundFile = 'attack.mp3';
             }
 
             const attackSound = new Audio(soundFile);
@@ -203,7 +217,7 @@
         }
 
         function playSkillSound() {
-            const skillSound = new Audio('skill.mp4');
+            const skillSound = new Audio('skill.mp3');
             skillSound.volume = 0.7;
             skillSound.play().catch(() => {});
         }
@@ -232,7 +246,7 @@
         let maxEnemiesPerWave = 6;
         let spawnTimer = 0;
         let selectedTower = null;
-        let currentBuildType = '远程';
+        let currentBuildType = null; // 預設為空手狀態
         let bossSpawnedThisWave = false;
 
         // 地圖路徑
@@ -259,11 +273,27 @@
         let cloneRunners = [];
 
         function setBuildType(type) {
-            currentBuildType = type;
-            document.getElementById('type-远程').classList.toggle('active', type === '远程');
-            document.getElementById('type-近战').classList.toggle('active', type === '近战');
-            document.getElementById('type-手枪').classList.toggle('active', type === '手枪');
-            document.getElementById('type-複製').classList.toggle('active', type === '複製');
+            // 如果點擊當前選擇的類型，則切換回空手狀態
+            if (currentBuildType === type) {
+                currentBuildType = null;
+            } else {
+                currentBuildType = type;
+                selectedTower = null; // 清除選取的塔
+            }
+
+            document.getElementById('type-远程').classList.toggle('active', currentBuildType === '远程');
+            document.getElementById('type-近战').classList.toggle('active', currentBuildType === '近战');
+            document.getElementById('type-手枪').classList.toggle('active', currentBuildType === '手枪');
+            document.getElementById('type-複製').classList.toggle('active', currentBuildType === '複製');
+            updateUI();
+        }
+
+        function clearBuildType() {
+            currentBuildType = null;
+            document.getElementById('type-远程').classList.remove('active');
+            document.getElementById('type-近战').classList.remove('active');
+            document.getElementById('type-手枪').classList.remove('active');
+            document.getElementById('type-複製').classList.remove('active');
         }
 
         function getFirstTarget(towerX, towerY, range) {
@@ -283,6 +313,10 @@
             return bestEnemy;
         }
 
+        function getTowerCost(type) {
+            return type === '複製' ? 180 : (type === '手枪' ? 150 : (type === '近战' ? 120 : 100));
+        }
+
         // 防禦塔類別
         class Tower {
             constructor(x, y, towerType = '远程') {
@@ -293,6 +327,7 @@
                 this.level = 1;
                 this.stunTimer = 0;
                 this.weakenTimer = 0;
+                this.totalSpent = getTowerCost(towerType); // 記錄總投入成本
 
                 if (towerType === '近战') {
                     this.range = 75;
@@ -433,6 +468,8 @@
             }
 
             upgrade() {
+                let cost = this.level * 50;
+                this.totalSpent += cost;
                 this.level++;
                 if (this.towerType === '手枪') {
                     this.baseDamage += 25;
@@ -1022,7 +1059,6 @@
 
             let spawnInterval = 36;
             
-            // 修正：第1波固定只出 6 隻怪，後續波次遞增
             if (wave === 1) {
                 maxEnemiesPerWave = 6;
             } else if (wave < 5) {
@@ -1043,11 +1079,16 @@
                 let enemyType = 'normal';
                 if (wave >= 2) {
                     let rand = Math.random();
+                    /* 
+                       Heavy Enemy (images (8).jpg) 生成率減少 7%：
+                       原邏輯機率區間：0.45 ~ 0.70 (25%)
+                       修改後機率區間：0.45 ~ 0.63 (18%，減少了 7%)
+                    */
                     if (wave >= 7 && rand < 0.25) {
                         enemyType = 'car';
                     } else if (wave >= 5 && rand < 0.45) {
                         enemyType = 'stun';
-                    } else if (rand < 0.70) {
+                    } else if (rand < 0.63) { // 由 0.70 降低為 0.63 (-7%)
                         enemyType = 'heavy';
                     } else if (rand < 0.90) {
                         enemyType = 'fast';
@@ -1147,9 +1188,11 @@
 
             const info = document.getElementById('tower-info');
             const btnUpgrade = document.getElementById('btn-upgrade');
+            const btnSell = document.getElementById('btn-sell');
 
             if (selectedTower) {
                 let cost = selectedTower.level * 50;
+                let sellPrice = Math.floor(selectedTower.totalSpent * 0.7);
 
                 info.innerHTML = `
                     🎯 <strong>已選取：${selectedTower.towerType}塔 (Lv.${selectedTower.level})</strong><br>
@@ -1164,11 +1207,22 @@
 
                 btnUpgrade.disabled = gold < cost;
                 btnUpgrade.innerText = `一鍵升級全屬性 [💰 ${cost}]`;
-            } else {
-                let cost = currentBuildType === '複製' ? 180 : (currentBuildType === '手枪' ? 150 : (currentBuildType === '近战' ? 120 : 100));
-                info.innerHTML = `👉 <strong>點擊草地建造${currentBuildType}塔</strong><br>建塔花費: 💰 ${cost}`;
+                
+                btnSell.disabled = false;
+                btnSell.innerText = `💰 賣出防禦塔 (+💰${sellPrice})`;
+            } else if (currentBuildType) {
+                let cost = getTowerCost(currentBuildType);
+                info.innerHTML = `👉 <strong>點擊草地建造${currentBuildType}塔</strong><br>建塔花費: 💰 ${cost}<br>（再次點擊按鈕可切換回空手狀態）`;
                 btnUpgrade.disabled = true;
                 btnUpgrade.innerText = `一鍵升級全屬性`;
+                btnSell.disabled = true;
+                btnSell.innerText = `💰 賣出防禦塔`;
+            } else {
+                info.innerHTML = `👉 <strong>空手狀態</strong><br>點擊上方建造按鈕準備建塔，或點擊地圖上的塔進行升級/賣出。`;
+                btnUpgrade.disabled = true;
+                btnUpgrade.innerText = `一鍵升級全屬性`;
+                btnSell.disabled = true;
+                btnSell.innerText = `💰 賣出防禦塔`;
             }
         }
 
@@ -1180,6 +1234,17 @@
                 selectedTower.upgrade();
                 updateUI();
             }
+        }
+
+        function sellSelectedTower() {
+            if (!selectedTower) return;
+            let sellPrice = Math.floor(selectedTower.totalSpent * 0.7);
+            gold += sellPrice;
+            
+            // 從陣列中移除該塔
+            towers = towers.filter(t => t !== selectedTower);
+            selectedTower = null;
+            updateUI();
         }
 
         canvas.addEventListener('click', (e) => {
@@ -1200,16 +1265,21 @@
 
             if (clickedTower) {
                 selectedTower = clickedTower;
-            } else {
-                let cost = currentBuildType === '複製' ? 180 : (currentBuildType === '手枪' ? 150 : (currentBuildType === '近战' ? 120 : 100));
+                clearBuildType(); // 選取防禦塔時切換回空手狀態
+            } else if (currentBuildType) {
+                // 如果目前在建塔狀態下點擊草地
+                let cost = getTowerCost(currentBuildType);
                 if (gold >= cost && canBuild(x, y)) {
                     gold -= cost;
                     let newTower = new Tower(x, y, currentBuildType);
                     towers.push(newTower);
                     selectedTower = newTower;
+                    clearBuildType(); // 建完單位後自動回到空手狀態
                 } else {
                     selectedTower = null;
                 }
+            } else {
+                selectedTower = null;
             }
             updateUI();
         });
