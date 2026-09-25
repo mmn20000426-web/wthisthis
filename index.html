@@ -243,7 +243,7 @@
         let hp = 10;
         let wave = 1;
         let enemiesSpawned = 0;
-        let maxEnemiesPerWave = 6;
+        let maxEnemiesPerWave = 5;
         let spawnTimer = 0;
         let selectedTower = null;
         let currentBuildType = null; // 預設為空手狀態
@@ -618,7 +618,7 @@
                     this.color = '#8e44ad';
                 } else if (type === 'fast') {
                     this.radius = 16;
-                    this.baseSpeed = baseSpeed * 1.8;
+                    this.baseSpeed = baseSpeed * 2.5; // 調高 images (10) 快速敵人的移動速度
                     this.maxHp = baseHp * 0.4;
                     this.reward = Math.floor((12 + wave * 3) * 0.8);
                     this.img = fastEnemyImg;
@@ -1059,7 +1059,7 @@
             let spawnInterval = 36;
             
             if (wave === 1) {
-                maxEnemiesPerWave = 6;
+                maxEnemiesPerWave = 5; // 將開局波次的怪物數量設定為 5 隻
             } else if (wave < 5) {
                 maxEnemiesPerWave = 4 + wave * 4;
             } else {
@@ -1082,7 +1082,7 @@
                         enemyType = 'car';
                     } else if (wave >= 5 && rand < 0.50) {
                         enemyType = 'stun';
-                    } else if (rand < 0.60) { // 將 images (8) 重型敵人的登場率從約 20% 調低至約 10%
+                    } else if (rand < 0.60) {
                         enemyType = 'heavy';
                     } else if (rand < 0.90) {
                         enemyType = 'fast';
