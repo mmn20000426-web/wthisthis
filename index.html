@@ -205,11 +205,14 @@
 
             if (soundType === 'slow_tower') {
                 soundFile = 'attack.mp3';
-                volume = 0.25;
+                volume = 0.6;
             } else if (soundType === 'melee') {
                 soundFile = 'attack (1).mp3';
             } else if (soundType === 'gun') {
                 soundFile = 'attack (2).mp4';
+            } else if (soundType === 'clone_spawn') {
+                soundFile = 'attack (3).mp4';
+                volume = 0.5;
             }
 
             const attackSound = new Audio(soundFile);
@@ -325,6 +328,7 @@
                 this.stunTimer = 0;
                 this.weakenTimer = 0;
                 this.totalSpent = getTowerCost(towerType);
+                this.spawnDelayTimer = 0; // 複製體召喚延遲計時器
 
                 if (towerType === '近战') {
                     this.range = 75;
@@ -429,6 +433,14 @@
                     return;
                 }
 
+                // 處理複製體 1.2 秒預告倒數 (72 frames)
+                if (this.spawnDelayTimer > 0) {
+                    this.spawnDelayTimer--;
+                    if (this.spawnDelayTimer === 0) {
+                        cloneRunners.push(new CloneRunner(this.damage));
+                    }
+                }
+
                 if (this.cooldown > 0) this.cooldown--;
 
                 if (this.cooldown <= 0) {
@@ -449,9 +461,9 @@
                                 playAttackSound('gun');
                             }
                         } else if (this.towerType === '複製') {
-                            cloneRunners.push(new CloneRunner(this.damage));
+                            playAttackSound('clone_spawn'); // 1.2秒前先播放音效
+                            this.spawnDelayTimer = 72;     // 72 frames ≈ 1.2 秒後召喚
                             this.cooldown = Math.max(120, this.fireRate);
-                            playAttackSound('normal');
                         } else {
                             if (target) {
                                 this.projectileType = this.projectileType === 'egg' ? 'oyster' : 'egg';
@@ -599,11 +611,11 @@
                     this.baseSpeed = baseSpeed * 1.2;
                     this.phase = 1;
                     this.carHp = baseHp * 2.5;
-                    this.humanHp = baseHp * 1.5;
+                    this.humanHp = Math.max(10, baseHp * 0.6);
                     this.maxHp = this.carHp;
                     this.hp = this.carHp;
                     this.reward = 35 + wave * 5;
-                    this.img = carImg; // 第一型態：car.jpg
+                    this.img = carImg;
                     this.color = '#111';
                     this.shootTimer = 0;
                 } else if (type === 'heavy') {
@@ -653,7 +665,7 @@
                 if (this.type === 'car' && this.phase === 1) {
                     this.hp -= amount;
                     if (this.hp <= 0) {
-                        this.phase = 2; // 切換為 images 手槍槍手型態
+                        this.phase = 2;
                         this.img = imagesGunnerImg;
                         this.maxHp = this.humanHp;
                         this.hp = this.humanHp;
@@ -767,17 +779,18 @@
                     this.slowTimer--;
                 }
 
-                // images 手槍掃射技能邏輯
                 if (this.type === 'car' && this.phase === 2) {
                     this.shootTimer++;
                     if (this.shootTimer >= 100) {
                         this.shootTimer = 0;
                         playAttackSound('gun');
-                        for (let tower of towers) {
-                            let dist = Math.hypot(tower.x - this.x, tower.y - this.y);
-                            if (dist <= 170) {
-                                tower.weakenTimer = 240;
-                                visualEffects.push(new WaveEffect(this.x, this.y, 170));
+                        visualEffects.push(new WaveEffect(this.x, this.y, 170));
+
+                        if (towers.length > 0) {
+                            let shuffled = [...towers].sort(() => 0.5 - Math.random());
+                            let targets = shuffled.slice(0, 2);
+                            for (let targetTower of targets) {
+                                targetTower.weakenTimer = 240;
                             }
                         }
                     }
@@ -1063,26 +1076,20 @@
                 bossSpawnedThisWave = true;
             }
 
-            // 出場機率微調（降低 car/images 及 images(13) 的登場率）
             if (spawnTimer >= spawnInterval && enemiesSpawned < maxEnemiesPerWave) {
                 let enemyType = 'normal';
                 if (wave >= 2) {
                     let rand = Math.random();
 
-                    if (wave >= 7 && rand < 0.10) {
-                        // 汽車/images 槍手：機率降低至 10%
+                    if (wave >= 7 && rand < 0.05) {
                         enemyType = 'car';
-                    } else if (wave >= 5 && rand < 0.20) {
-                        // images (13) 擊暈怪：機率降低至 10% (0.10 ~ 0.20)
+                    } else if (wave >= 5 && rand < 0.10) {
                         enemyType = 'stun';
-                    } else if (rand < 0.50) {
-                        // 重型怪：30% (0.20 ~ 0.50)
+                    } else if (rand < 0.25) {
                         enemyType = 'heavy';
-                    } else if (rand < 0.80) {
-                        // 快速怪：30% (0.50 ~ 0.80)
+                    } else if (rand < 0.65) {
                         enemyType = 'fast';
                     } else {
-                        // 普通怪：20% (0.80 ~ 1.00)
                         enemyType = 'normal';
                     }
                 }
